@@ -1,53 +1,71 @@
 import { createStore } from "redux";
 
-const add = document.getElementById("add");
-const minus = document.getElementById("minus");
-const number = document.querySelector("span");
 
-// Action
-const ADD = "ADD";
-const MINUS = "MINUS";
+const form = document.querySelector("form");
+const input = document.querySelector("input");
+const ul = document.querySelector("ul");
 
-// function that modify the data.
-// 상태 데이터를 수정해주는 함수 = reducer.
-// 오직 하나의 함수만 상태 데이터를 변경할 수 있다.
-const countReducer = (count = 0, action) => {
+const ADD_TODO = "ADD_TODO";
+const DELETE_TODO = "DELETE_TODO";
+
+// Action만 별도로 선언해서 관리한다.
+const addToDo = (text) => {
+    return { type: ADD_TODO, text };
+}
+
+const deleteToDo = (id) => {
+    return { type: DELETE_TODO, id };
+}
+
+const reducer = (state = [], action) => {
+    console.log(action);
     switch (action.type) {
-        case ADD:
-            return count + 1
-        case MINUS:
-            return count - 1
+        case ADD_TODO:
+            // 기존의 array와 새로운 객체를 합쳐서 새로운 data object를 반환한다.
+            return [{ text: action.text, id: Date.now() }, ...state];
+        case DELETE_TODO:
+            return state.filter(toDo => toDo.id !== parseInt(action.id));
         default:
-            return count;
+            return state;
     }
 };
 
-// reducer의 역할은 data를 바꿔주는 역할을 한다.
-const countStore = createStore(countReducer);
+const store = createStore(reducer);
 
-// Subscribe
-const onChange = () => {
-    console.log(countStore.getState());
-    number.innerText = countStore.getState();
+store.subscribe(() => console.log(store.getState()));
+
+const dispatchAddToDo = (text) => {
+    // reducer와 소통하기 위한 dispatch.
+    store.dispatch(addToDo(text));
+}
+
+const dispatchDeleteToDo = (e) => {
+    const id = parseInt(e.target.parentNode.id);
+    store.dispatch(deleteToDo(id));
+}
+
+const paintToDos = () => {
+    const toDos = store.getState();
+    ul.innerHTML = "";
+    toDos.forEach(toDo => {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.innerText = "Delete";
+        btn.addEventListener("click", dispatchDeleteToDo);
+        li.id = toDo.id;
+        li.innerText = toDo.text;
+        li.appendChild(btn);
+        ul.appendChild(li);
+    })
+}
+
+store.subscribe(paintToDos);
+
+const onSubmit = e => {
+    e.preventDefault();
+    const toDo = input.value;
+    input.value = "";
+    dispatchAddToDo(toDo);
 };
 
-countStore.subscribe(onChange);
-
-
-// dispatch를 이용해서 createStore의 인자로 넣어준 countReducer로 메세지를 보낸다.
-// countReducer(currentState=0, {type: "Hello"})로 정의해준다.
-
-const handleAdd = () => {
-    countStore.dispatch({ type: ADD });
-}
-
-const handleMinus = () => {
-    countStore.dispatch({ type: MINUS });
-}
-
-add.addEventListener("click", handleAdd);
-minus.addEventListener("click", handleMinus);
-
-// store에는 dispatch, subscribe, getState, replaceReducer
-// 네 가지 function을 가지고 있다. 
-// console.log(countStore.getState());
+form.addEventListener("submit", onSubmit);
